@@ -13,12 +13,15 @@ import UIKit
 /// on your `SwipeableTabBarController` subclass.
 class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
 
+    var start: Closure?
+    var finish: Closure?
+
     /// Duration of the transition animation.
     fileprivate var animationDuration: TimeInterval!
 
     /// Is currently performing an animation
     fileprivate var animationStarted = false
-    
+
     // TODO: - (marcosgriselli) add support for snapshot views.
     /// Side which de animation will be performed from.
     var fromLeft = false
@@ -39,13 +42,13 @@ class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
     }
 
     // MARK: - UIViewControllerAnimatedTransitioning
-    
+
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         return (transitionContext?.isAnimated == true) ? animationDuration : 0
     }
-    
+
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
-        
+
         // Pre check if there's a previous transition runing and cancel the current one.
         if animationStarted {
             return transitionContext.completeTransition(false)
@@ -57,20 +60,21 @@ class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
             else {
                 return transitionContext.completeTransition(false)
         }
-        
+
         animationStarted = true
-        
+
         let duration = transitionDuration(using: transitionContext)
         fromView.endEditing(true)
 
         let containerView = transitionContext.containerView
         animationType.addTo(containerView: containerView, fromView: fromView, toView: toView)
         animationType.prepare(fromView: fromView, toView: toView, direction: fromLeft)
-    
+
         UIView.animate(withDuration: duration,
                        delay: 0.0,
                        options: [.curveEaseOut],
                        animations: {
+                        self.start?()
                         self.animationType.animation(fromView: fromView, toView: toView, direction: self.fromLeft)
         },
                        completion: {[unowned self] _ in
@@ -90,6 +94,7 @@ class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
                                     toView: UIView?,
                                     in context: UIViewControllerContextTransitioning) {
         DispatchQueue.main.async {
+            self.finish?()
             self.animationStarted = false
             if context.transitionWasCancelled {
                 toView?.removeFromSuperview()

@@ -8,16 +8,26 @@
 
 import UIKit
 
-/// Responsible of adding the `UIPanGestureRecognizer` to the current 
+//protocol SwipeInteractorDelegate {
+//
+//    @available(iOS 11.0, *)
+//    func didStart(hide: Bool)
+//
+//    @available(iOS 11.0, *)
+//    func didFinish(hide: Bool)
+//
+//}
+
+/// Responsible of adding the `UIPanGestureRecognizer` to the current
 /// tab selected on the `UITabBarController` subclass.
 class SwipeInteractor: UIPercentDrivenInteractiveTransition {
-    
+
     // MARK: - Private
     private var viewController: UIViewController!
     private var rightToLeftSwipe = false
     private var shouldCompleteTransition = false
     private var canceled = false
-    
+
     // MARK: - Fileprivate
     fileprivate var panRecognizer: UIPanGestureRecognizer?
     fileprivate struct InteractionConstants {
@@ -26,18 +36,20 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
         static let xVelocityForComplete: CGFloat = 200.0
         static let xTranslationForRecognition: CGFloat = 5.0
     }
-    
+
     fileprivate struct AssociatedKey {
         static var swipeGestureKey = "kSwipeableTabBarControllerGestureKey"
     }
-    
+
     // MARK: - Public
     var isDiagonalSwipeEnabled = false
     var interactionInProgress = false
-    
+
     typealias Closure = (() -> ())
     var onfinishTransition: Closure?
-    
+
+    //var delegate: SwipeInteractorDelegate?
+
     /// Sets the viewController to be the one in charge of handling the swipe transition.
     ///
     /// - Parameter viewController: `UIViewController` in charge of the the transition.
@@ -45,34 +57,34 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
         self.viewController = viewController
         prepareGestureRecognizer(inView: viewController.view)
     }
-    
-    
+
+
     /// Adds the `UIPanGestureRecognizer` to the controller's view to handle swiping.
     ///
     /// - Parameter view: `UITabBarController` tab controller's view (`UINavigationControllers` not included).
     public func prepareGestureRecognizer(inView view: UIView) {
         panRecognizer = objc_getAssociatedObject(view, &AssociatedKey.swipeGestureKey) as? UIPanGestureRecognizer
-        
+
         if let swipe = panRecognizer {
             view.removeGestureRecognizer(swipe)
         }
-        
+
         panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(SwipeInteractor.handlePan(_:)))
         panRecognizer?.delegate = self
         panRecognizer?.isEnabled = isEnabled
         view.addGestureRecognizer(panRecognizer!)
         objc_setAssociatedObject(view, &AssociatedKey.swipeGestureKey, panRecognizer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
-    
-    
+
+
     /// Handles the swiping with progress
     ///
     /// - Parameter recognizer: `UIPanGestureRecognizer` in the current tab controller's view.
     @objc func handlePan(_ recognizer: UIPanGestureRecognizer) {
-        
+
         let translation = recognizer.translation(in: recognizer.view?.superview)
         let velocity = recognizer.velocity(in: recognizer.view)
-    
+
         switch recognizer.state {
         case .began:
 
@@ -80,8 +92,19 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                 interactionInProgress = false
                 return
             }
-            
+
             rightToLeftSwipe = velocity.x < 0
+
+            if rightToLeftSwipe && viewController.tabBarController!.selectedIndex != 0 {
+                interactionInProgress = false
+                return
+            }
+
+            if !rightToLeftSwipe && viewController.tabBarController!.selectedIndex != 1 {
+                interactionInProgress = false
+                return
+            }
+
             if rightToLeftSwipe {
                 if viewController.tabBarController!.selectedIndex < viewController.tabBarController!.viewControllers!.count - 1 {
                     interactionInProgress = true
@@ -93,10 +116,13 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                     viewController.tabBarController?.selectedIndex -= 1
                 }
             }
+//            if interactionInProgress, #available(iOS 11.0, *) {
+//                delegate?.didStart()
+//            }
         case .changed:
             if interactionInProgress {
                 let translationValue = translation.x/UIScreen.main.bounds.size.width
-                
+
                 // TODO (marcosgriselli): support dual side swipping in one drag.
                 if rightToLeftSwipe && translationValue > 0 {
                     self.update(0)
@@ -105,17 +131,21 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                     self.update(0)
                     return
                 }
-                
+
                 var fraction = fabs(translationValue)
                 fraction = min(max(fraction, 0.0), 0.99)
                 shouldCompleteTransition = (fraction > 0.5);
-                
+
                 self.update(fraction)
             }
-            
+
         case .ended, .cancelled:
             if interactionInProgress {
                 interactionInProgress = false
+//                if #available(iOS 11.0, *) {
+//                    delegate?.didFinish()
+//                }
+
                 if !shouldCompleteTransition {
                     if (rightToLeftSwipe && velocity.x < -InteractionConstants.xVelocityForComplete) {
                         shouldCompleteTransition = true
@@ -123,7 +153,7 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                         shouldCompleteTransition = true
                     }
                 }
-                
+
                 if !shouldCompleteTransition || recognizer.state == .cancelled {
                     cancel()
                 } else {
@@ -133,16 +163,16 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                     onfinishTransition?()
                 }
             }
-            
+
         default : break
         }
     }
-    
-    /// enables/disables the entire interactor. 
+
+    /// enables/disables the entire interactor.
     public var isEnabled = true {
         didSet { panRecognizer?.isEnabled = isEnabled }
     }
-    
+
     /// Checks for the diagonal swipe support. It evaluates if the current gesture is diagonal or Y-Axis based.
     ///
     /// - Parameters:
@@ -154,7 +184,7 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
             // Cancel interaction if the movement is on the Y axis.
             let isTranslatingOnYAxis = fabs(yTranslation) > InteractionConstants.yTranslationForSuspend
             let hasVelocityOnYAxis = fabs(yVelocity) > InteractionConstants.yVelocityForSuspend
-            
+
             return isTranslatingOnYAxis || hasVelocityOnYAxis
         }
         return false

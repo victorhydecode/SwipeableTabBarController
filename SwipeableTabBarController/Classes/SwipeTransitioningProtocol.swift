@@ -10,7 +10,11 @@ import UIKit
 
 /// Added to support custom `UIViewControllerAnimatedTransitioning` in different applications.
 public protocol SwipeTransitioningProtocol: UIViewControllerAnimatedTransitioning {
-    
+
+    typealias Closure = (() -> ())
+    var start: Closure? { get set }
+    var finish: Closure? { get set }
+
     /// Direction in which the animation will occur.
     var fromLeft: Bool { get set }
 

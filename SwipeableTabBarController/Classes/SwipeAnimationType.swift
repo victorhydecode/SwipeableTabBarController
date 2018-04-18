@@ -25,7 +25,7 @@ public enum SwipeAnimationType: SwipeAnimationTypeProtocol {
     case push
     case none
 
-    
+
     /// Setup the views hirearchy for different animations types.
     ///
     /// - Parameters:
@@ -43,7 +43,7 @@ public enum SwipeAnimationType: SwipeAnimationTypeProtocol {
         }
     }
 
-    
+
     /// Setup the views position prior to the animation start.
     ///
     /// - Parameters:
@@ -67,7 +67,7 @@ public enum SwipeAnimationType: SwipeAnimationTypeProtocol {
         }
     }
 
-    
+
     /// The animation to take place.
     ///
     /// - Parameters:
