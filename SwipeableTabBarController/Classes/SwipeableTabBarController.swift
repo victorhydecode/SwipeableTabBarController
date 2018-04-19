@@ -188,13 +188,13 @@ extension SwipeableTabBarController { //: SwipeInteractorDelegate {
         newInsets?.bottom -= offsetY
 
         /// Helper method for updating child view controller's safe area insets.
-        func set(childViewController cvc: UIViewController?, additionalSafeArea: UIEdgeInsets) {
-            cvc?.additionalSafeAreaInsets = additionalSafeArea
-            cvc?.view.setNeedsLayout()
-        }
+//        func set(childViewController cvc: UIViewController?, additionalSafeArea: UIEdgeInsets) {
+//            cvc?.additionalSafeAreaInsets = additionalSafeArea
+//            cvc?.view.setNeedsLayout()
+//        }
 
         // Update safe area insets for the current view controller before the animation takes place when hiding the bar.
-        if hidden, let insets = newInsets { set(childViewController: vc, additionalSafeArea: insets) }
+//        if hidden, let insets = newInsets { set(childViewController: vc, additionalSafeArea: insets) }
 
         guard animated else {
             tabBar.frame = endFrame
@@ -207,13 +207,13 @@ extension SwipeableTabBarController { //: SwipeInteractorDelegate {
         if let tc = transitionCoordinator {
             tc.animateAlongsideTransition(in: self.view, animation: { _ in tabBarRef?.frame = endFrame }) { context in
                 if !hidden, let insets = context.isCancelled ? originalInsets : newInsets {
-                    set(childViewController: vc, additionalSafeArea: insets)
+//                    set(childViewController: vc, additionalSafeArea: insets)
                 }
             }
         } else {
             UIView.animate(withDuration: 0.3, animations: { tabBarRef?.frame = endFrame }) { didFinish in
                 if !hidden, didFinish, let insets = newInsets {
-                    set(childViewController: vc, additionalSafeArea: insets)
+//                    set(childViewController: vc, additionalSafeArea: insets)
                 }
             }
         }
