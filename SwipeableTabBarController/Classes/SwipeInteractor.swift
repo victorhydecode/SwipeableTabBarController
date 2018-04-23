@@ -28,6 +28,9 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     private var shouldCompleteTransition = false
     private var canceled = false
 
+    private var leftGestureSensitiveRect: CGRect!
+    private var rightGestureSensitiveRect: CGRect!
+
     // MARK: - Fileprivate
     fileprivate var panRecognizer: UIPanGestureRecognizer?
     fileprivate struct InteractionConstants {
@@ -55,6 +58,18 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     /// - Parameter viewController: `UIViewController` in charge of the the transition.
     public func wireTo(viewController: UIViewController) {
         self.viewController = viewController
+
+        let view = viewController.view!
+        rightGestureSensitiveRect = CGRect(x: view.bounds.origin.x + (view.bounds.size.width / 4) * 3,
+                                           y: view.bounds.origin.y,
+                                           width: view.bounds.size.width,
+                                           height: view.bounds.size.height);
+        leftGestureSensitiveRect = CGRect(x: view.bounds.origin.x,
+                                           y: view.bounds.origin.y,
+                                           width: view.bounds.size.width / 4,
+                                           height: view.bounds.size.height);
+
+
         prepareGestureRecognizer(inView: viewController.view)
     }
 
@@ -94,6 +109,15 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
             }
 
             rightToLeftSwipe = velocity.x < 0
+
+            let point = recognizer.location(in: viewController.view)
+            if rightToLeftSwipe && !rightGestureSensitiveRect.contains(point) {
+                interactionInProgress = false
+                return
+            } else if !rightToLeftSwipe && !leftGestureSensitiveRect.contains(point) {
+                interactionInProgress = false
+                return
+            }
 
             if rightToLeftSwipe && viewController.tabBarController!.selectedIndex != 0 {
                 interactionInProgress = false
