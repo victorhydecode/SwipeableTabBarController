@@ -8,15 +8,10 @@
 
 import UIKit
 
-//protocol SwipeInteractorDelegate {
-//
-//    @available(iOS 11.0, *)
-//    func didStart(hide: Bool)
-//
-//    @available(iOS 11.0, *)
-//    func didFinish(hide: Bool)
-//
-//}
+protocol SwipeInteractorDelegate {
+    func panGestureDidStart()
+    func panGestureDidFinish()
+}
 
 /// Responsible of adding the `UIPanGestureRecognizer` to the current
 /// tab selected on the `UITabBarController` subclass.
@@ -51,7 +46,7 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     typealias Closure = (() -> ())
     var onfinishTransition: Closure?
 
-    //var delegate: SwipeInteractorDelegate?
+    var delegate: SwipeInteractorDelegate?
 
     /// Sets the viewController to be the one in charge of handling the swipe transition.
     ///
@@ -65,9 +60,9 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                                            width: view.bounds.size.width,
                                            height: view.bounds.size.height);
         leftGestureSensitiveRect = CGRect(x: view.bounds.origin.x,
-                                           y: view.bounds.origin.y,
-                                           width: view.bounds.size.width / 4,
-                                           height: view.bounds.size.height);
+                                          y: view.bounds.origin.y,
+                                          width: view.bounds.size.width / 4,
+                                          height: view.bounds.size.height);
 
 
         prepareGestureRecognizer(inView: viewController.view)
@@ -102,6 +97,7 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
 
         switch recognizer.state {
         case .began:
+            delegate?.panGestureDidStart()
 
             if shouldSuspendInteraction(yTranslation: translation.y, yVelocity: velocity.y) {
                 interactionInProgress = false
@@ -140,9 +136,9 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                     viewController.tabBarController?.selectedIndex -= 1
                 }
             }
-//            if interactionInProgress, #available(iOS 11.0, *) {
-//                delegate?.didStart()
-//            }
+            //            if interactionInProgress, #available(iOS 11.0, *) {
+            //                delegate?.didStart()
+        //            }
         case .changed:
             if interactionInProgress {
                 let translationValue = translation.x/UIScreen.main.bounds.size.width
@@ -166,9 +162,11 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
         case .ended, .cancelled:
             if interactionInProgress {
                 interactionInProgress = false
-//                if #available(iOS 11.0, *) {
-//                    delegate?.didFinish()
-//                }
+                delegate?.panGestureDidFinish()
+
+                //                if #available(iOS 11.0, *) {
+                //                    delegate?.didFinish()
+                //                }
 
                 if !shouldCompleteTransition {
                     if (rightToLeftSwipe && velocity.x < -InteractionConstants.xVelocityForComplete) {
@@ -182,7 +180,7 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
                     cancel()
                 } else {
                     // Avoid launching a new transaction while the previous one is finishing.
-                    recognizer.isEnabled = false
+                    //recognizer.isEnabled = false
                     finish()
                     onfinishTransition?()
                 }

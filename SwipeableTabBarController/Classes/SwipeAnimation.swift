@@ -13,6 +13,8 @@ import UIKit
 /// on your `SwipeableTabBarController` subclass.
 class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
 
+    private var swipeDidFinish = false
+
     var start: Closure?
     var finish: Closure?
 
@@ -48,6 +50,12 @@ class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+
+        if swipeDidFinish {
+            swipeDidFinish = false
+            transitionContext.cancelInteractiveTransition()
+            return transitionContext.completeTransition(false)
+        }
 
         // Pre check if there's a previous transition runing and cancel the current one.
         if animationStarted {
@@ -103,5 +111,14 @@ class SwipeAnimation: NSObject, SwipeTransitioningProtocol {
             }
             context.completeTransition(!context.transitionWasCancelled)
         }
+    }
+}
+
+extension SwipeAnimation: SwipeInteractorDelegate {
+    func panGestureDidStart() {
+        swipeDidFinish = false
+    }
+    func panGestureDidFinish() {
+        swipeDidFinish = true
     }
 }
