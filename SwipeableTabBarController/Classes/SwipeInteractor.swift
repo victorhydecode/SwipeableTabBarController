@@ -23,11 +23,10 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     private var shouldCompleteTransition = false
     private var canceled = false
 
-    private var leftGestureSensitiveRect: CGRect!
-    private var rightGestureSensitiveRect: CGRect!
-
     // MARK: - Fileprivate
-    fileprivate var panRecognizer: UIPanGestureRecognizer?
+    fileprivate var lPanRecognizer: UIScreenEdgePanGestureRecognizer?
+    fileprivate var rPanRecognizer: UIScreenEdgePanGestureRecognizer?
+
     fileprivate struct InteractionConstants {
         static let yTranslationForSuspend: CGFloat = 5.0
         static let yVelocityForSuspend: CGFloat = 100.0
@@ -36,7 +35,8 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     }
 
     fileprivate struct AssociatedKey {
-        static var swipeGestureKey = "kSwipeableTabBarControllerGestureKey"
+        static var swipeGestureKeyLeft = "kSwipeableTabBarControllerGestureKeyLeft"
+        static var swipeGestureKeyRight = "kSwipeableTabBarControllerGestureKeyRight"
     }
 
     // MARK: - Public
@@ -53,18 +53,6 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     /// - Parameter viewController: `UIViewController` in charge of the the transition.
     public func wireTo(viewController: UIViewController) {
         self.viewController = viewController
-
-        let view = viewController.view!
-        rightGestureSensitiveRect = CGRect(x: view.bounds.origin.x + (view.bounds.size.width / 4) * 3,
-                                           y: view.bounds.origin.y,
-                                           width: view.bounds.size.width,
-                                           height: view.bounds.size.height);
-        leftGestureSensitiveRect = CGRect(x: view.bounds.origin.x,
-                                          y: view.bounds.origin.y,
-                                          width: view.bounds.size.width / 4,
-                                          height: view.bounds.size.height);
-
-
         prepareGestureRecognizer(inView: viewController.view)
     }
 
@@ -73,17 +61,30 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
     ///
     /// - Parameter view: `UITabBarController` tab controller's view (`UINavigationControllers` not included).
     public func prepareGestureRecognizer(inView view: UIView) {
-        panRecognizer = objc_getAssociatedObject(view, &AssociatedKey.swipeGestureKey) as? UIPanGestureRecognizer
+        lPanRecognizer = objc_getAssociatedObject(view, &AssociatedKey.swipeGestureKeyLeft) as? UIScreenEdgePanGestureRecognizer
+        rPanRecognizer = objc_getAssociatedObject(view, &AssociatedKey.swipeGestureKeyRight) as? UIScreenEdgePanGestureRecognizer
 
-        if let swipe = panRecognizer {
+        if let swipe = lPanRecognizer {
+            view.removeGestureRecognizer(swipe)
+        }
+        if let swipe = rPanRecognizer {
             view.removeGestureRecognizer(swipe)
         }
 
-        panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(SwipeInteractor.handlePan(_:)))
-        panRecognizer?.delegate = self
-        panRecognizer?.isEnabled = isEnabled
-        view.addGestureRecognizer(panRecognizer!)
-        objc_setAssociatedObject(view, &AssociatedKey.swipeGestureKey, panRecognizer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        lPanRecognizer = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(SwipeInteractor.handlePan(_:)))
+        lPanRecognizer?.edges = .left
+        lPanRecognizer?.delegate = self
+        lPanRecognizer?.isEnabled = isEnabled
+        view.addGestureRecognizer(lPanRecognizer!)
+
+        rPanRecognizer = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(SwipeInteractor.handlePan(_:)))
+        rPanRecognizer?.edges = .right
+        rPanRecognizer?.delegate = self
+        rPanRecognizer?.isEnabled = isEnabled
+        view.addGestureRecognizer(rPanRecognizer!)
+
+        objc_setAssociatedObject(view, &AssociatedKey.swipeGestureKeyLeft, lPanRecognizer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, &AssociatedKey.swipeGestureKeyRight, rPanRecognizer, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     }
 
 
@@ -105,15 +106,6 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
             }
 
             rightToLeftSwipe = velocity.x < 0
-
-            let point = recognizer.location(in: viewController.view)
-            if rightToLeftSwipe && !rightGestureSensitiveRect.contains(point) {
-                interactionInProgress = false
-                return
-            } else if !rightToLeftSwipe && !leftGestureSensitiveRect.contains(point) {
-                interactionInProgress = false
-                return
-            }
 
             if rightToLeftSwipe && viewController.tabBarController!.selectedIndex != 0 {
                 interactionInProgress = false
@@ -192,7 +184,10 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
 
     /// enables/disables the entire interactor.
     public var isEnabled = true {
-        didSet { panRecognizer?.isEnabled = isEnabled }
+        didSet {
+            lPanRecognizer?.isEnabled = isEnabled
+            rPanRecognizer?.isEnabled = isEnabled
+        }
     }
 
     /// Checks for the diagonal swipe support. It evaluates if the current gesture is diagonal or Y-Axis based.
@@ -217,8 +212,13 @@ class SwipeInteractor: UIPercentDrivenInteractiveTransition {
 extension SwipeInteractor: UIGestureRecognizerDelegate {
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer == panRecognizer {
-            if let point = panRecognizer?.translation(in: panRecognizer?.view?.superview) {
+        if gestureRecognizer == lPanRecognizer {
+            if let point = lPanRecognizer?.translation(in: lPanRecognizer?.view?.superview) {
+                return fabs(point.x) < InteractionConstants.xTranslationForRecognition
+            }
+        }
+        if gestureRecognizer == rPanRecognizer {
+            if let point = rPanRecognizer?.translation(in: rPanRecognizer?.view?.superview) {
                 return fabs(point.x) < InteractionConstants.xTranslationForRecognition
             }
         }
